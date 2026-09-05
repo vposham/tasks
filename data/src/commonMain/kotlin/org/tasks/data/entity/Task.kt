@@ -285,7 +285,7 @@ data class Task @OptIn(ExperimentalSerializationApi::class) constructor(
      * How the most recent occurrence of a recurring task was resolved.
      * Stamped on [lastResolution] immediately before [org.tasks.data.entity.Task]
      * advances to its next occurrence, and read back out when serializing the
-     * outgoing VTODO's `X-HABITSYNC-ACTION` property (CalDAV has no native
+     * outgoing VTODO's `X-HABITWEAVE-ACTION` property (CalDAV has no native
      * concept of "skipped" - Tasks.org's own advance-in-place recurrence
      * model is otherwise indistinguishable between the two).
      */
