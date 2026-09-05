@@ -31,6 +31,7 @@ import org.tasks.markdown.MarkdownProvider
 import org.tasks.preferences.PermissionChecker
 import org.tasks.preferences.Preferences
 import org.tasks.receivers.CompleteTaskReceiver
+import org.tasks.receivers.SkipTaskReceiver
 import org.tasks.reminders.NotificationActivity
 import org.tasks.reminders.SnoozeActivity
 import org.jetbrains.compose.resources.StringResource
@@ -42,6 +43,7 @@ import org.tasks.time.DateTime
 import org.tasks.time.DateTimeUtils2.currentTimeMillis
 import tasks.kmp.generated.resources.Res
 import tasks.kmp.generated.resources.rmd_NoA_done
+import tasks.kmp.generated.resources.rmd_NoA_skip
 import tasks.kmp.generated.resources.rmd_NoA_snooze
 import timber.log.Timber
 import java.util.Locale
@@ -431,6 +433,7 @@ class NotificationManager @Inject constructor(
 
     data class ActionLabels(
         val complete: String,
+        val skip: String,
         val snooze: String,
         val snoozeOptions: List<String>,
     )
@@ -438,6 +441,7 @@ class NotificationManager @Inject constructor(
     private suspend fun actionLabels(options: List<SnoozeOption>): ActionLabels {
         val wanted = buildList {
             add(Res.string.rmd_NoA_done)
+            add(Res.string.rmd_NoA_skip)
             add(Res.string.rmd_NoA_snooze)
             options.forEach { add(it.label) }
         }
@@ -446,8 +450,9 @@ class NotificationManager @Inject constructor(
         val resolved = wanted.map { getString(it) }
         return ActionLabels(
             complete = resolved[0],
-            snooze = resolved[1],
-            snoozeOptions = resolved.drop(2),
+            skip = resolved[1],
+            snooze = resolved[2],
+            snoozeOptions = resolved.drop(3),
         ).also { cachedActionLabels = (locale to wanted) to it }
     }
 
@@ -480,7 +485,7 @@ class NotificationManager @Inject constructor(
         }
 
         val snoozeOptions = snoozeOptions(preferences.quickPickTimes)
-        val (completeLabel, snoozeActionLabel, snoozeLabels) = actionLabels(snoozeOptions)
+        val (completeLabel, skipLabel, snoozeActionLabel, snoozeLabels) = actionLabels(snoozeOptions)
 
         // read properties
         val localized = localeContext
@@ -497,7 +502,7 @@ class NotificationManager @Inject constructor(
                 .setOnlyAlertOnce(false)
                 .setShowWhen(true)
                 .setTicker(taskTitle)
-        val intent = NotificationActivity.newIntent(context, taskTitle.toString(), id, task.readOnly)
+        val intent = NotificationActivity.newIntent(context, taskTitle.toString(), id, task.readOnly, task.isRecurring)
         builder.setContentIntent(
                 PendingIntent.getActivity(
                     context,
@@ -537,6 +542,19 @@ class NotificationManager @Inject constructor(
                 completeLabel,
                 completePendingIntent)
                 .build()
+        val skipIntent = Intent(context, SkipTaskReceiver::class.java)
+        skipIntent.putExtra(SkipTaskReceiver.TASK_ID, id)
+        val skipPendingIntent = PendingIntent.getBroadcast(
+            context,
+            id.toInt(),
+            skipIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+        val skipAction = NotificationCompat.Action.Builder(
+                R.drawable.ic_outline_repeat_24px,
+                skipLabel,
+                skipPendingIntent)
+                .build()
         val snoozeIntent = SnoozeActivity.newIntent(context, id)
         val snoozePendingIntent = PendingIntent.getActivity(
             context,
@@ -547,6 +565,9 @@ class NotificationManager @Inject constructor(
         val wearableExtender = NotificationCompat.WearableExtender()
         if (!task.readOnly) {
             wearableExtender.addAction(completeAction)
+            if (task.isRecurring) {
+                wearableExtender.addAction(skipAction)
+            }
         }
         for ((snoozeOption, snoozeLabel) in snoozeOptions.zip(snoozeLabels)) {
             val timestamp = snoozeOption.timestamp
@@ -568,6 +589,9 @@ class NotificationManager @Inject constructor(
         }
         if (!task.readOnly) {
             builder.addAction(completeAction)
+            if (task.isRecurring) {
+                builder.addAction(skipAction)
+            }
         }
         return TaskNotification.Ready(
                 builder

@@ -11,6 +11,9 @@ build/
 *.AppImage
 *.AppImage.zsync
 local.properties
+*.keystore
+*.jks
+release-signing/
 Thumbs.db
 /captures/
 /fastlane/report.xml

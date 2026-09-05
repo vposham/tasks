@@ -2139,6 +2139,7 @@ private fun TaskListPane(
                         reporting.completeTask("task_list")
                     }
                 },
+                onSkipTask = { task -> viewModel.onSkipTask(task) },
                 onToggleGroup = { viewModel.toggleCollapsed(it) },
                 onToggleSubtasks = { id, collapsed ->
                     viewModel.toggleSubtasks(id, collapsed)
@@ -2711,6 +2712,7 @@ private fun TaskList(
     topPadding: Dp = 0.dp,
     onTaskClick: (TaskContainer) -> Unit,
     onCompleteTask: (TaskContainer, Boolean) -> Unit,
+    onSkipTask: (TaskContainer) -> Unit = {},
     onToggleGroup: (Long) -> Unit = {},
     onToggleSubtasks: (Long, Boolean) -> Unit = { _, _ -> },
     onFilterClick: (Filter) -> Unit = {},
@@ -2756,6 +2758,7 @@ private fun TaskList(
                 dateFormatter = dateFormatter,
                 onClick = { onTaskClick(task) },
                 onToggleComplete = { onCompleteTask(task, !task.isCompleted) },
+                onSkip = { onSkipTask(task) },
                 onToggleSubtasks = { onToggleSubtasks(task.id, !task.isCollapsed) },
                 onFilterClick = onFilterClick,
             )

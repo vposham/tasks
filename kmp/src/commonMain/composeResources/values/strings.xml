@@ -122,6 +122,7 @@
     <string name="none">None</string>
     <string name="show_more">Show more</string>
     <string name="show_less">Show less</string>
+    <string name="skip_occurrence">Skip occurrence</string>
     <string name="display_name">Display name</string>
     <string name="upgrade_to_pro_card_description">Unlock Tasks.org Cloud sync, Friends &amp; Family Sharing, and Email-to-Task</string>
     <string name="supporter">Supporter</string>
@@ -558,6 +559,7 @@
     <string name="swipe_to_snooze_time_1_hour">after 1 hour</string>
     <string name="swipe_to_snooze_time_24_hours">after 24 hours</string>
     <string name="rmd_NoA_done">Complete</string>
+    <string name="rmd_NoA_skip">Skip</string>
     <string name="rmd_NoA_snooze">Snooze</string>
     <string name="snoozed_reminder">Snoozed reminder</string>
     <string name="action_open">Open</string>

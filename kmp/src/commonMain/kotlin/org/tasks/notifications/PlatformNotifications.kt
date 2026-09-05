@@ -5,17 +5,20 @@ import org.tasks.extensions.guarded
 import tasks.kmp.generated.resources.Res
 import tasks.kmp.generated.resources.action_open
 import tasks.kmp.generated.resources.rmd_NoA_done
+import tasks.kmp.generated.resources.rmd_NoA_skip
 import tasks.kmp.generated.resources.rmd_NoA_snooze
 
 enum class NotificationAction {
     OPEN,
     COMPLETE,
+    SKIP,
     SNOOZE;
 
     val key: String
         get() = when (this) {
             OPEN -> "open"
             COMPLETE -> "complete"
+            SKIP -> "skip"
             SNOOZE -> "snooze"
         }
 
@@ -23,6 +26,7 @@ enum class NotificationAction {
         get() = when (this) {
             OPEN -> "Open"
             COMPLETE -> "Complete"
+            SKIP -> "Skip"
             SNOOZE -> "Snooze"
         }
 
@@ -38,6 +42,7 @@ enum class NotificationAction {
             when (action) {
                 OPEN -> getString(Res.string.action_open)
                 COMPLETE -> getString(Res.string.rmd_NoA_done)
+                SKIP -> getString(Res.string.rmd_NoA_skip)
                 SNOOZE -> getString(Res.string.rmd_NoA_snooze)
             }
         }

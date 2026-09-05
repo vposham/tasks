@@ -31,6 +31,7 @@ class NotificationActionHandler(
                     NotificationAction.OPEN -> open(taskId)
 
                     NotificationAction.COMPLETE -> taskCompleter.setComplete(taskId)
+                    NotificationAction.SKIP -> taskCompleter.setSkipped(taskId)
                     NotificationAction.SNOOZE -> snooze(taskId)
                 }
             }

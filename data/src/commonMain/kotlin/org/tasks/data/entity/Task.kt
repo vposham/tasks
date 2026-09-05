@@ -89,6 +89,8 @@ data class Task @OptIn(ExperimentalSerializationApi::class) constructor(
     var order: Long? = null,
     @ColumnInfo(name = "read_only", defaultValue = "0")
     var readOnly: Boolean = false,
+    @ColumnInfo(name = "lastResolution")
+    var lastResolution: String? = null,
     @Ignore
     @Transient
     private var transitoryData: @CommonRawValue HashMap<String, Any>? = null,
@@ -277,6 +279,19 @@ data class Task @OptIn(ExperimentalSerializationApi::class) constructor(
             const val DUE_DATE = 0
             const val COMPLETION_DATE = 1
         }
+    }
+
+    /**
+     * How the most recent occurrence of a recurring task was resolved.
+     * Stamped on [lastResolution] immediately before [org.tasks.data.entity.Task]
+     * advances to its next occurrence, and read back out when serializing the
+     * outgoing VTODO's `X-HABITSYNC-ACTION` property (CalDAV has no native
+     * concept of "skipped" - Tasks.org's own advance-in-place recurrence
+     * model is otherwise indistinguishable between the two).
+     */
+    enum class Resolution(val serialized: String) {
+        COMPLETED("completed"),
+        SKIPPED("skipped");
     }
 
     companion object {

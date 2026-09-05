@@ -57,12 +57,52 @@ class TaskCompleter(
             .filterNotNull()
             .filter { it.isCompleted != completionDate > 0 }
             .filterNot { it.readOnly }
+            .onEach {
+                if (completed && it.isRecurring) {
+                    it.lastResolution = Task.Resolution.COMPLETED.serialized
+                }
+            }
             .let { tasks ->
                 setComplete(tasks, completionDate)
                 if (completed && !item.isRecurring) {
                     refreshBroadcaster.broadcastTaskCompleted(tasks.map { it.id })
                 }
             }
+    }
+
+    /**
+     * Skips the current occurrence of a recurring task: advances it to its
+     * next occurrence exactly like completing it would, but without ever
+     * marking it completed (no completion sound/animation/undo-snackbar -
+     * nothing was actually done). Stamps [Task.lastResolution] as
+     * [Task.Resolution.SKIPPED] first so the next CalDAV push tags the
+     * outgoing VTODO accordingly. No-op for non-recurring or read-only
+     * tasks.
+     */
+    suspend fun setSkipped(taskId: Long) =
+        taskDao
+            .fetch(taskId)
+            ?.let { setSkipped(it) }
+            ?: Logger.e(tag = TAG) { "Could not find task $taskId" }
+
+    suspend fun setSkipped(item: Task) {
+        if (!item.isRecurring || item.readOnly) {
+            return
+        }
+        if (caldavDao.getAccountForTask(item.id)?.isSuppressRepeatingTasks == true) {
+            return
+        }
+        Logger.d(TAG) { "Skipping $item" }
+        notifier.cancel(item.id, CancelReason.COMPLETE)
+        item.lastResolution = Task.Resolution.SKIPPED.serialized
+        calendarHelper.updateEvent(item)
+        val oldDueDate = item.dueDate.takeIf { it > 0 }
+        if (repeatTaskHelper.handleRepeat(item)) {
+            refreshBroadcaster.broadcastRefresh()
+            oldDueDate?.let {
+                refreshBroadcaster.broadcastTaskCompleted(listOf(item.id), it)
+            }
+        }
     }
 
     suspend fun setComplete(tasks: List<Task>, completionDate: Long) {

@@ -35,6 +35,9 @@ internal object NotificationContent {
             if (backend.supportsActions) {
                 if (!task.readOnly) {
                     add(NotificationAction.COMPLETE)
+                    if (task.isRecurring) {
+                        add(NotificationAction.SKIP)
+                    }
                 }
                 add(NotificationAction.SNOOZE)
             }

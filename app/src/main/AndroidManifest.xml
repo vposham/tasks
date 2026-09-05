@@ -530,6 +530,7 @@
     </receiver>
 
     <receiver android:name=".receivers.CompleteTaskReceiver"/>
+    <receiver android:name=".receivers.SkipTaskReceiver"/>
 
     <receiver
         android:name=".receivers.MyPackageReplacedReceiver"

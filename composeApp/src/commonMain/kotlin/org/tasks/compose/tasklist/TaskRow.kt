@@ -2,6 +2,7 @@ package org.tasks.compose.tasklist
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
@@ -11,7 +12,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.outlined.RadioButtonUnchecked
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -56,6 +61,7 @@ import org.tasks.time.startOfDay
 import tasks.kmp.generated.resources.Res
 import tasks.kmp.generated.resources.show_less
 import tasks.kmp.generated.resources.show_more
+import tasks.kmp.generated.resources.skip_occurrence
 
 internal enum class RowState {
     Draw,
@@ -73,6 +79,8 @@ internal fun rowState(deletions: Map<String, Boolean>, task: TaskContainer): Row
     }
 
 internal const val COMPLETE_BUTTON_TAG = "task-row-complete"
+internal const val OVERFLOW_MENU_TAG = "task-row-overflow"
+internal const val SKIP_OCCURRENCE_MENU_ITEM_TAG = "task-row-skip-occurrence"
 
 @Composable
 internal fun TaskRow(
@@ -85,6 +93,7 @@ internal fun TaskRow(
     dateFormatter: DateFormatter?,
     onClick: () -> Unit,
     onToggleComplete: () -> Unit,
+    onSkip: () -> Unit = {},
     onToggleSubtasks: () -> Unit,
     onFilterClick: (Filter) -> Unit,
 ) {
@@ -276,6 +285,36 @@ internal fun TaskRow(
                             onClick = { onFilterClick(tag) },
                         )
                     }
+                }
+            }
+        }
+        if (task.task.isRecurring && !task.isCompleted) {
+            var menuExpanded by remember { mutableStateOf(false) }
+            Box {
+                IconButton(
+                    onClick = { menuExpanded = true },
+                    enabled = !doomed,
+                    modifier = Modifier.size(48.dp).testTag(OVERFLOW_MENU_TAG),
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.MoreVert,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                DropdownMenu(
+                    expanded = menuExpanded,
+                    onDismissRequest = { menuExpanded = false },
+                ) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(Res.string.skip_occurrence)) },
+                        leadingIcon = { Icon(imageVector = Icons.Filled.Repeat, contentDescription = null) },
+                        onClick = {
+                            menuExpanded = false
+                            onSkip()
+                        },
+                        modifier = Modifier.testTag(SKIP_OCCURRENCE_MENU_ITEM_TAG),
+                    )
                 }
             }
         }

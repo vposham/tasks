@@ -3,8 +3,10 @@ package org.tasks.compose.tasklist
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -40,12 +42,14 @@ class TaskRowTest {
         uncompletedChildren: Int = children,
         completed: Boolean = false,
         indent: Int = 0,
+        recurrence: String? = null,
     ) = TaskContainer(
         task = Task(
             id = 1,
             title = title,
             remoteId = "uuid-1",
             completionDate = if (completed) 1 else 0,
+            recurrence = recurrence,
         ),
         children = children,
         uncompletedChildren = uncompletedChildren,
@@ -56,6 +60,7 @@ class TaskRowTest {
         var opened = 0
         var completed = 0
         var foldedAway = 0
+        var skipped = 0
     }
 
     @Composable
@@ -71,6 +76,7 @@ class TaskRowTest {
                 dateFormatter = null,
                 onClick = { clicks.opened++ },
                 onToggleComplete = { clicks.completed++ },
+                onSkip = { clicks.skipped++ },
                 onToggleSubtasks = { clicks.foldedAway++ },
                 onFilterClick = {},
             )
@@ -171,6 +177,35 @@ class TaskRowTest {
         onNodeWithText("2").assertIsNotEnabled()
 
         assertEquals(0, clicks.foldedAway)
+    }
+
+    @Test
+    fun aRecurringRowOffersSkipInItsOverflowMenu() = runComposeUiTest {
+        val clicks = Clicks()
+        setContent { Row(task(recurrence = "FREQ=DAILY"), doomed = false, clicks = clicks) }
+
+        onNodeWithTag(OVERFLOW_MENU_TAG).performClick()
+        onNodeWithTag(SKIP_OCCURRENCE_MENU_ITEM_TAG).performClick()
+
+        assertEquals(1, clicks.skipped)
+    }
+
+    @Test
+    fun aNonRecurringRowHasNoOverflowMenu() = runComposeUiTest {
+        setContent { Row(task(recurrence = null), doomed = false, clicks = Clicks()) }
+        waitUntil { onAllNodes(hasText("Buy milk")).fetchSemanticsNodes().isNotEmpty() }
+
+        onAllNodes(hasTestTag(OVERFLOW_MENU_TAG)).assertCountEquals(0)
+    }
+
+    @Test
+    fun aCompletedRecurringRowHasNoOverflowMenu() = runComposeUiTest {
+        setContent {
+            Row(task(recurrence = "FREQ=DAILY", completed = true), doomed = false, clicks = Clicks())
+        }
+        waitUntil { onAllNodes(hasText("Buy milk")).fetchSemanticsNodes().isNotEmpty() }
+
+        onAllNodes(hasTestTag(OVERFLOW_MENU_TAG)).assertCountEquals(0)
     }
 
     @Test

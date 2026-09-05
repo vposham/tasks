@@ -14,8 +14,10 @@ import org.tasks.data.dao.TaskDao
 import org.jetbrains.compose.resources.getString
 import org.tasks.intents.TaskIntents
 import org.tasks.receivers.CompleteTaskReceiver
+import org.tasks.receivers.SkipTaskReceiver
 import tasks.kmp.generated.resources.Res
 import tasks.kmp.generated.resources.rmd_NoA_done
+import tasks.kmp.generated.resources.rmd_NoA_skip
 import tasks.kmp.generated.resources.rmd_NoA_snooze
 import timber.log.Timber
 import javax.inject.Inject
@@ -41,11 +43,14 @@ class NotificationActivity : AppCompatActivity(), NotificationDialog.Notificatio
         lifecycleScope.launch {
             val completeLabel = getString(Res.string.rmd_NoA_done)
             val snoozeLabel = getString(Res.string.rmd_NoA_snooze)
+            val skipLabel = getString(Res.string.rmd_NoA_skip)
             val fragment = NotificationDialog()
             fragment.arguments = Bundle().apply {
                 putBoolean(EXTRA_READ_ONLY, intent.getBooleanExtra(EXTRA_READ_ONLY, false))
+                putBoolean(EXTRA_RECURRING, intent.getBooleanExtra(EXTRA_RECURRING, false))
                 putString(EXTRA_COMPLETE_LABEL, completeLabel)
                 putString(EXTRA_SNOOZE_LABEL, snoozeLabel)
+                putString(EXTRA_SKIP_LABEL, skipLabel)
             }
             withStarted {
                 fragment.show(fragmentManager, FRAG_TAG_NOTIFICATION_FRAGMENT)
@@ -86,19 +91,30 @@ class NotificationActivity : AppCompatActivity(), NotificationDialog.Notificatio
         finish()
     }
 
+    override fun skip() {
+        firebase.logEvent(R.string.event_notification, R.string.param_type to "skip")
+        val intent = Intent(this, SkipTaskReceiver::class.java)
+        intent.putExtra(SkipTaskReceiver.TASK_ID, taskId)
+        sendBroadcast(intent)
+        finish()
+    }
+
     companion object {
         const val EXTRA_TITLE = "extra_title"
         const val EXTRA_TASK_ID = "extra_task_id"
         const val EXTRA_READ_ONLY = "extra_read_only"
+        const val EXTRA_RECURRING = "extra_recurring"
         const val EXTRA_COMPLETE_LABEL = "extra_complete_label"
         const val EXTRA_SNOOZE_LABEL = "extra_snooze_label"
+        const val EXTRA_SKIP_LABEL = "extra_skip_label"
         private const val FRAG_TAG_NOTIFICATION_FRAGMENT = "frag_tag_notification_fragment"
-        fun newIntent(context: Context?, title: String?, id: Long, readOnly: Boolean): Intent {
+        fun newIntent(context: Context?, title: String?, id: Long, readOnly: Boolean, recurring: Boolean): Intent {
             val intent = Intent(context, NotificationActivity::class.java)
             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             intent.putExtra(EXTRA_TASK_ID, id)
             intent.putExtra(EXTRA_TITLE, title)
             intent.putExtra(EXTRA_READ_ONLY, readOnly)
+            intent.putExtra(EXTRA_RECURRING, recurring)
             return intent
         }
     }

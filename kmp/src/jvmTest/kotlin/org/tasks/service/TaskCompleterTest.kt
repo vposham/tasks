@@ -1,11 +1,16 @@
 package org.tasks.service
 
+import com.todoroo.astrid.repeats.RepeatTaskHelper
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.mockito.kotlin.any
+import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.verifyNoInteractions
 import org.tasks.DatabaseTest
 import org.tasks.data.TaskSaver
 import org.tasks.data.entity.Task
@@ -23,20 +28,27 @@ class TaskCompleterTest : DatabaseTest() {
         caldavDao = db.caldavDao(),
     )
 
+    private val repeatTaskHelper: RepeatTaskHelper = mock()
+
     private val completer = TaskCompleter(
         taskDao = taskDao,
         taskSaver = taskSaver,
         notifier = mock(),
         refreshBroadcaster = mock(),
-        repeatTaskHelper = mock(),
+        repeatTaskHelper = repeatTaskHelper,
         caldavDao = db.caldavDao(),
         calendarHelper = mock(),
         completionDao = db.completionDao(),
         soundPlayer = mock(),
     )
 
-    private suspend fun newTask(title: String, parent: Long = 0, completedAt: Long = 0): Task {
-        val task = Task(title = title, parent = parent, completionDate = completedAt)
+    private suspend fun newTask(
+        title: String,
+        parent: Long = 0,
+        completedAt: Long = 0,
+        recurrence: String? = null,
+    ): Task {
+        val task = Task(title = title, parent = parent, completionDate = completedAt, recurrence = recurrence)
         taskDao.createNew(task)
         return task
     }
@@ -135,6 +147,61 @@ class TaskCompleterTest : DatabaseTest() {
 
         assertFalse(taskDao.fetch(b.id)!!.isCompleted)
         assertEquals(untouched, completionOf(elsewhere))
+    }
+
+    @Test
+    fun skippingARecurringTaskStampsSkippedAndAdvancesIt() = runBlocking {
+        val task = newTask("Exercise", recurrence = "FREQ=DAILY")
+
+        completer.setSkipped(task)
+
+        assertEquals(Task.Resolution.SKIPPED.serialized, task.lastResolution)
+        assertFalse("skip must never leave the task marked completed", task.isCompleted)
+    }
+
+    @Test
+    fun skippingANonRecurringTaskIsANoOp() = runBlocking {
+        val task = newTask("One-off errand")
+
+        completer.setSkipped(task)
+
+        verifyNoInteractions(repeatTaskHelper)
+        assertNull(task.lastResolution)
+    }
+
+    @Test
+    fun skippingAReadOnlyTaskIsANoOp() = runBlocking {
+        val task = newTask("Read-only habit", recurrence = "FREQ=DAILY")
+        task.readOnly = true
+
+        completer.setSkipped(task)
+
+        verifyNoInteractions(repeatTaskHelper)
+        assertNull(task.lastResolution)
+    }
+
+    @Test
+    fun completingARecurringTaskStampsCompletedBeforeItAdvances() = runBlocking {
+        val recurring: RepeatTaskHelper = mock {
+            onBlocking { handleRepeat(any()) } doReturn true
+        }
+        val completerWithSpy = TaskCompleter(
+            taskDao = taskDao,
+            taskSaver = taskSaver,
+            notifier = mock(),
+            refreshBroadcaster = mock(),
+            repeatTaskHelper = recurring,
+            caldavDao = db.caldavDao(),
+            calendarHelper = mock(),
+            completionDao = db.completionDao(),
+            soundPlayer = mock(),
+        )
+        val task = newTask("Exercise", recurrence = "FREQ=DAILY")
+
+        completerWithSpy.setComplete(task, true)
+
+        val saved = taskDao.fetch(task.id)!!
+        assertEquals(Task.Resolution.COMPLETED.serialized, saved.lastResolution)
     }
 
     companion object {

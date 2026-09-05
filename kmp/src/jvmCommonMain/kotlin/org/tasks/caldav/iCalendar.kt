@@ -330,6 +330,7 @@ class iCalendar(
         private const val OC_HIDESUBTASKS = "X-OC-HIDESUBTASKS"
         private const val MOZ_SNOOZE_TIME = "X-MOZ-SNOOZE-TIME"
         private const val MOZ_LASTACK = "X-MOZ-LASTACK"
+        private const val HABITSYNC_ACTION = "X-HABITSYNC-ACTION"
         private const val HIDE_SUBTASKS = "1"
         private val PRODID_MATCHER = ".*?PRODID:(.*?)\n.*".toPattern(Pattern.DOTALL)
         // VALARM extensions: https://datatracker.ietf.org/doc/html/rfc9074
@@ -344,6 +345,7 @@ class iCalendar(
         private val IS_OC_HIDESUBTASKS = { x: Property? -> x?.name.equals(OC_HIDESUBTASKS, true) }
         private val IS_MOZ_SNOOZE_TIME = { x: Property? -> x?.name.equals(MOZ_SNOOZE_TIME, true) }
         private val IS_MOZ_LASTACK = { x: Property? -> x?.name.equals(MOZ_LASTACK, true) }
+        private val IS_HABITSYNC_ACTION = { x: Property? -> x?.name.equals(HABITSYNC_ACTION, true) }
 
         fun Due?.apply(task: org.tasks.data.entity.Task) {
             task.dueDate = toMillis()
@@ -462,6 +464,24 @@ class iCalendar(
                 }
             }
 
+        // Tasks.org's recurring-task advance overwrites the same VTODO's
+        // DTSTART/DUE in place with no RECURRENCE-ID exception and no
+        // COMPLETED timestamp, so a plain CalDAV diff can't tell "completed"
+        // from "skipped via the recurring icon" - both produce an identical
+        // shape of change. This X- property is the one signal that does.
+        var VTodoTask.habitSyncAction: String?
+            get() = unknownProperties.find(IS_HABITSYNC_ACTION)?.value
+            set(value) {
+                if (value.isNullOrBlank()) {
+                    unknownProperties.removeIf(IS_HABITSYNC_ACTION)
+                } else {
+                    unknownProperties
+                        .find(IS_HABITSYNC_ACTION)
+                        ?.let { it.value = value }
+                        ?: unknownProperties.add(XProperty(HABITSYNC_ACTION, value))
+                }
+            }
+
         var VTodoTask.collapsed: Boolean
             get() = unknownProperties.find(IS_OC_HIDESUBTASKS).let { it?.value == HIDE_SUBTASKS }
             set(collapsed) {
@@ -566,6 +586,7 @@ class iCalendar(
             parent = caldavTask.remoteParent?.takeIf { it.isNotBlank() }
             order = task.order
             collapsed = task.isCollapsed
+            habitSyncAction = task.lastResolution
         }
 
         val List<VAlarm>.filtered: List<VAlarm>

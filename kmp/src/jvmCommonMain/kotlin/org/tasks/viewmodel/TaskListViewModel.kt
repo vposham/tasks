@@ -135,6 +135,12 @@ open class TaskListViewModel(
         }
     }
 
+    fun onSkipTask(taskContainer: TaskContainer) {
+        viewModelScope.launch {
+            taskCompleter.setSkipped(taskContainer.task)
+        }
+    }
+
     fun toggleSubtasks(taskId: Long, collapsed: Boolean) {
         viewModelScope.launch {
             taskSaver.setCollapsed(taskId, collapsed)

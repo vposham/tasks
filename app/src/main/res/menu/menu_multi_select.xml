@@ -27,6 +27,12 @@
     app:showAsAction="always" />
 
   <item
+    android:id="@+id/skip_occurrence"
+    android:icon="@drawable/ic_outline_repeat_24px"
+    android:title="@string/skip_occurrence"
+    app:showAsAction="ifRoom" />
+
+  <item
     android:id="@+id/menu_select_all"
     android:icon="@drawable/ic_select_all_24px"
     android:title="@string/select_all"

@@ -9,7 +9,9 @@ import org.tasks.R
 import org.tasks.dialogs.DialogBuilder
 import org.tasks.reminders.NotificationActivity.Companion.EXTRA_COMPLETE_LABEL
 import org.tasks.reminders.NotificationActivity.Companion.EXTRA_SNOOZE_LABEL
+import org.tasks.reminders.NotificationActivity.Companion.EXTRA_SKIP_LABEL
 import org.tasks.reminders.NotificationActivity.Companion.EXTRA_READ_ONLY
+import org.tasks.reminders.NotificationActivity.Companion.EXTRA_RECURRING
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -22,14 +24,19 @@ class NotificationDialog : DialogFragment() {
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         handler = activity as NotificationHandler
         val readOnly = requireArguments().getBoolean(EXTRA_READ_ONLY)
+        val recurring = requireArguments().getBoolean(EXTRA_RECURRING)
 
         val completeLabel = requireArguments().getString(EXTRA_COMPLETE_LABEL)
         val snoozeLabel = requireArguments().getString(EXTRA_SNOOZE_LABEL)
+        val skipLabel = requireArguments().getString(EXTRA_SKIP_LABEL)
         val actions = buildList<Pair<String, () -> Unit>> {
             add(getString(R.string.TAd_actionEditTask) to handler::edit)
             add(snoozeLabel.orEmpty() to handler::snooze)
             if (!readOnly) {
                 add(completeLabel.orEmpty() to handler::complete)
+                if (recurring) {
+                    add(skipLabel.orEmpty() to handler::skip)
+                }
             }
         }
         return dialogBuilder
@@ -56,6 +63,8 @@ class NotificationDialog : DialogFragment() {
         fun snooze()
 
         fun complete()
+
+        fun skip()
 
         fun dismiss()
     }

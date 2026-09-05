@@ -21,6 +21,18 @@ class NucleusMacNotificationsTest {
         )
 
         assertEquals(
+            NucleusMacNotifications.CATEGORY_ACTIONABLE_RECURRING,
+            NucleusMacNotifications.categoryFor(
+                listOf(
+                    NotificationAction.OPEN,
+                    NotificationAction.COMPLETE,
+                    NotificationAction.SKIP,
+                    NotificationAction.SNOOZE,
+                ),
+            ),
+        )
+
+        assertEquals(
             NucleusMacNotifications.CATEGORY_SNOOZE_ONLY,
             NucleusMacNotifications.categoryFor(
                 listOf(NotificationAction.OPEN, NotificationAction.SNOOZE),
@@ -30,11 +42,12 @@ class NucleusMacNotificationsTest {
 
     @Test
     fun everyCategoryAsksToBeToldAboutTheCloseButton() {
-        val categories = NucleusMacNotifications.categories(complete = "Done", snooze = "Snooze")
+        val categories = NucleusMacNotifications.categories(complete = "Done", skip = "Skip", snooze = "Snooze")
 
         assertEquals(
             setOf(
                 NucleusMacNotifications.CATEGORY_ACTIONABLE,
+                NucleusMacNotifications.CATEGORY_ACTIONABLE_RECURRING,
                 NucleusMacNotifications.CATEGORY_SNOOZE_ONLY,
             ),
             categories.map { it.identifier }.toSet(),
@@ -45,6 +58,25 @@ class NucleusMacNotificationsTest {
                 CategoryOption.CUSTOM_DISMISS_ACTION in it.options,
             )
         }
+    }
+
+    @Test
+    fun onlyTheRecurringCategoryOffersSkip() {
+        val categories = NucleusMacNotifications.categories(complete = "Done", skip = "Skip", snooze = "Snooze")
+            .associateBy { it.identifier }
+
+        assertTrue(
+            categories.getValue(NucleusMacNotifications.CATEGORY_ACTIONABLE_RECURRING).actions
+                .any { it.identifier == NotificationAction.SKIP.key },
+        )
+        assertFalse(
+            categories.getValue(NucleusMacNotifications.CATEGORY_ACTIONABLE).actions
+                .any { it.identifier == NotificationAction.SKIP.key },
+        )
+        assertFalse(
+            categories.getValue(NucleusMacNotifications.CATEGORY_SNOOZE_ONLY).actions
+                .any { it.identifier == NotificationAction.SKIP.key },
+        )
     }
 
     @Test
@@ -88,6 +120,7 @@ class NucleusMacNotificationsTest {
     @Test
     fun theCategoryIdentifiersAreTheOnesAlreadyOnScreen() {
         assertEquals("org.tasks.reminder", NucleusMacNotifications.CATEGORY_ACTIONABLE)
+        assertEquals("org.tasks.reminder.recurring", NucleusMacNotifications.CATEGORY_ACTIONABLE_RECURRING)
         assertEquals("org.tasks.reminder.snooze", NucleusMacNotifications.CATEGORY_SNOOZE_ONLY)
     }
 

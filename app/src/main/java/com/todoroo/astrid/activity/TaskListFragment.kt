@@ -1043,7 +1043,7 @@ class TaskListFragment : Fragment(), OnRefreshListener, Toolbar.OnMenuItemClickL
         val inflater = actionMode.menuInflater
         inflater.inflate(R.menu.menu_multi_select, menu)
         if (filter.isReadOnly) {
-            listOf(R.id.edit_tags, R.id.move_tasks, R.id.reschedule, R.id.copy_tasks, R.id.delete)
+            listOf(R.id.edit_tags, R.id.move_tasks, R.id.reschedule, R.id.copy_tasks, R.id.delete, R.id.skip_occurrence)
                 .forEach { menu.findItem(it).isVisible = false }
         }
         return true
@@ -1164,6 +1164,17 @@ class TaskListFragment : Fragment(), OnRefreshListener, Toolbar.OnMenuItemClickL
                                 R.string.ok) { _, _ -> copySelectedItems(selected) }
                         .setNegativeButton(R.string.cancel, null)
                         .show()
+                true
+            }
+            R.id.skip_occurrence -> {
+                logMultiSelect("skip_occurrence", selected.size)
+                lifecycleScope.launch {
+                    taskDao
+                        .fetch(selected)
+                        .filter { it.isRecurring && !it.readOnly }
+                        .forEach { taskCompleter.setSkipped(it) }
+                }
+                finishActionMode()
                 true
             }
             else -> false

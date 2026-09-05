@@ -166,6 +166,7 @@ class NucleusMacNotifications private constructor(
         }
 
         val complete = NotificationAction.labelOrNull(NotificationAction.COMPLETE)
+        val skip = NotificationAction.labelOrNull(NotificationAction.SKIP)
         val snooze = NotificationAction.labelOrNull(NotificationAction.SNOOZE)
         categoryLock.withLock {
             if (categoriesRegistered) {
@@ -174,11 +175,12 @@ class NucleusMacNotifications private constructor(
             NotificationCenter.setNotificationCategories(
                 categories(
                     complete = complete ?: NotificationAction.COMPLETE.fallbackLabel,
+                    skip = skip ?: NotificationAction.SKIP.fallbackLabel,
                     snooze = snooze ?: NotificationAction.SNOOZE.fallbackLabel,
                 )
             )
 
-            categoriesRegistered = complete != null && snooze != null
+            categoriesRegistered = complete != null && skip != null && snooze != null
         }
     }
 
@@ -186,18 +188,32 @@ class NucleusMacNotifications private constructor(
 
     companion object {
         internal const val CATEGORY_ACTIONABLE = "org.tasks.reminder"
+        internal const val CATEGORY_ACTIONABLE_RECURRING = "org.tasks.reminder.recurring"
         internal const val CATEGORY_SNOOZE_ONLY = "org.tasks.reminder.snooze"
 
-        internal fun categoryFor(actions: List<NotificationAction>): String =
-            if (NotificationAction.COMPLETE in actions) CATEGORY_ACTIONABLE else CATEGORY_SNOOZE_ONLY
+        internal fun categoryFor(actions: List<NotificationAction>): String = when {
+            NotificationAction.COMPLETE in actions && NotificationAction.SKIP in actions ->
+                CATEGORY_ACTIONABLE_RECURRING
+            NotificationAction.COMPLETE in actions -> CATEGORY_ACTIONABLE
+            else -> CATEGORY_SNOOZE_ONLY
+        }
 
         private val REPORTS_DISMISSAL = setOf(CategoryOption.CUSTOM_DISMISS_ACTION)
 
-        internal fun categories(complete: String, snooze: String): Set<MacCategory> = setOf(
+        internal fun categories(complete: String, skip: String, snooze: String): Set<MacCategory> = setOf(
             MacCategory(
                 identifier = CATEGORY_ACTIONABLE,
                 actions = listOf(
                     MacAction(identifier = NotificationAction.COMPLETE.key, title = complete),
+                    MacAction(identifier = NotificationAction.SNOOZE.key, title = snooze),
+                ),
+                options = REPORTS_DISMISSAL,
+            ),
+            MacCategory(
+                identifier = CATEGORY_ACTIONABLE_RECURRING,
+                actions = listOf(
+                    MacAction(identifier = NotificationAction.COMPLETE.key, title = complete),
+                    MacAction(identifier = NotificationAction.SKIP.key, title = skip),
                     MacAction(identifier = NotificationAction.SNOOZE.key, title = snooze),
                 ),
                 options = REPORTS_DISMISSAL,
